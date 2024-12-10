@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Langchain-CSV Query Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f4f4f4;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+    <div class="w-full max-w-xl bg-white p-8 rounded-xl shadow-lg"> <!-- Changed max-w-md to max-w-xl -->
+        <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Langchain - CSV Query Assistant</h1>
+        
+        <!-- Flash Messages Container -->
+        <div id="messages" class="mb-4">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="bg-blue-100 border border-blue-400 text-blue-700 px-4 py-3 rounded relative" role="alert">
+                            <span class="block sm:inline">{{ message }}</span>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+        </div>
+
+        <!-- Form for File Upload and Query Input -->
+        <form action="/process" method="post" enctype="multipart/form-data" class="space-y-4">
+            <div>
+                <label for="file" class="block text-sm font-medium text-gray-700">Upload CSV File</label>
+                <input 
+                    type="file" 
+                    name="file" 
+                    accept=".csv" 
+                    required 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+            </div>
+
+            <div>
+                <label for="query" class="block text-sm font-medium text-gray-700">Enter Your Query</label>
+                <input 
+                    type="text" 
+                    name="query" 
+                    placeholder="Type your query about the CSV data" 
+                    required 
+                    class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                >
+            </div>
+
+            <button 
+                type="submit" 
+                class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            >
+                Submit Query
+            </button>
+        </form>
+
+        <!-- Query Response Section -->
+        {% if response %}
+            <div class="mt-6 p-4 bg-gray-50 rounded-md">
+                <h2 class="text-lg font-semibold mb-2 text-gray-800">Query Response:</h2>
+                <p class="text-gray-700">{{ response }}</p>
+            </div>
+        {% endif %}
+    </div>
+</body>
+</html>
