@@ -86,6 +86,30 @@ def store_embeddings_pgvector(texts, table_name):
         return f"Error storing embeddings: {e}"
 
 
+def get_pgvector_retriever():
+    try:
+        # Initialize the embeddings generator
+        embeddings_generator = GoogleGenerativeAIEmbeddings(
+            api_key=GOOGLE_API_KEY,
+            model="models/embedding-001"
+        )
+
+        # Initialize the vectorstore
+        vectorstore = PGVector(
+            connection_string=DB_CONNECTION_URL_2,
+            embedding_function=embeddings_generator,
+        )
+
+        # Use as_retriever to wrap the vectorstore
+        retriever = vectorstore.as_retriever(
+            search_kwargs={"table_name": "langchain_pg_embedding", "k": 5}  # Retrieve top 5 results
+        )
+        return retriever
+    except Exception as e:
+        print(f"Error initializing retriever: {e}")
+        return None
+
+
 def query_groq_with_response(user_query):
     try:
         chatgroq = ChatGroq(
@@ -96,20 +120,32 @@ def query_groq_with_response(user_query):
         )
 
         prompt_template = PromptTemplate(
-            input_variables=["query"],
-            template="Query: {query}\nPlease generate a detailed response based on the provided documents."
+            input_variables=["context", "query"],
+            template="Context: {context}\n\nQuery: {query}\n\nPlease generate a detailed response based on the context."
         )
+
+        # Retrieve relevant chunks
+        retriever = get_pgvector_retriever()
+        if not retriever:
+            return "Error initializing retriever. Please check the setup."
+
+        # Use the retriever to get relevant documents
+        retrieved_docs = retriever.get_relevant_documents(user_query)
+        context = "\n".join(doc.page_content for doc in retrieved_docs)  # Combine the retrieved texts
+
+        if not context.strip():
+            context = "No relevant context retrieved."
 
         # Construct the LLM chain using the prompt template
         llm_chain = prompt_template | chatgroq
 
         # Generate a response from the model
         print(f"Generating response for query: {user_query}")
-        response = llm_chain.invoke({"query": user_query})
-        
-        # Directly return the response text
+        response = llm_chain.invoke({"context": context, "query": user_query})
+
+        # Return the response text
         return response.content if hasattr(response, 'content') else str(response)
-    
+
     except Exception as e:
         print(f"Error in query generation: {e}")
         return "An error occurred while processing your query."
@@ -155,9 +191,6 @@ def process_file_and_query():
 
         # Query the LLM for a response
         response = query_groq_with_response(user_query)
-
-        # Flash the response
-        # flash(f"Response: {response}")
 
         # Pass the response to the template
         return render_template("index.html", response=response)
